@@ -1,0 +1,27 @@
+# Ambiente virtual Python
+.venv/
+venv/
+env/
+
+# Banco de dados local (histórico de buscas pessoal)
+cursos.db
+
+# Relatório gerado automaticamente (não faz sentido versionar)
+relatorio.html
+
+# Logs locais
+logs/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# Sistema
+.DS_Store
+Thumbs.db
