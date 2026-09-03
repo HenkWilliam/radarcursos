@@ -4,6 +4,8 @@ import os
 import re
 import sqlite3
 import webbrowser
+import urllib.request
+import urllib.parse
 from datetime import datetime
 from urllib.parse import unquote, urlparse
 
@@ -641,6 +643,53 @@ def gerar_html(resultados: list[dict]) -> str:
     return html
 
 
+# ─── Telegram Alertas ─────────────────────────────────────────────────────────
+def enviar_alerta_telegram(resultados_abertos: list[dict]):
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+
+    if not resultados_abertos:
+        log("📢 Telegram: Nenhuma vaga com status 'Aberto' para notificar.")
+        return
+
+    log(f"📢 Enviando alerta Telegram para {len(resultados_abertos)} curso(s) abertos...")
+
+    linhas = [
+        "🎓 *RadarCursos — Novos Cursos Encontrados!*",
+        f"📅 _{datetime.now().strftime('%d/%m/%Y %H:%M')}_\n"
+    ]
+
+    for i, r in enumerate(resultados_abertos[:8], start=1):
+        titulo = r['titulo'].replace('*', '').replace('_', '')
+        inst = r['instituicao'].replace('*', '').replace('_', '')
+        url = r['url']
+        linhas.append(f"🟢 *{i}. {titulo}*")
+        linhas.append(f"🏛️ {inst} | 🎓 {r['nivel']}")
+        linhas.append(f"🔗 [Acessar edital]({url})\n")
+
+    if len(resultados_abertos) > 8:
+        linhas.append(f"_+ mais {len(resultados_abertos) - 8} vagas no relatório completo!_")
+
+    mensagem = "\n".join(linhas)
+
+    try:
+        api_url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text": mensagem,
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": "true"
+        }).encode("utf-8")
+        req = urllib.request.Request(api_url, data=payload)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status == 200:
+                log("✅ Alerta Telegram enviado com sucesso!")
+    except Exception as err:
+        log(f"⚠️ Falha ao enviar Telegram: {err}")
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 async def main():
     limpar_log()
@@ -677,9 +726,13 @@ async def main():
     con.close()
 
     # ── Contadores por status ──
-    n_aberto    = sum(1 for r in todos_resultados if r["status_vaga"] == "Aberto")
-    n_provavel  = sum(1 for r in todos_resultados if r["status_vaga"] == "Provável")
-    n_encerrado = sum(1 for r in todos_resultados if r["status_vaga"] == "Encerrado")
+    abertos     = [r for r in todos_resultados if r["status_vaga"] == "Aberto"]
+    provaveis   = [r for r in todos_resultados if r["status_vaga"] == "Provável"]
+    encerrados  = [r for r in todos_resultados if r["status_vaga"] == "Encerrado"]
+
+    n_aberto    = len(abertos)
+    n_provavel  = len(provaveis)
+    n_encerrado = len(encerrados)
 
     # ── Resumo no terminal ──
     print()
@@ -709,10 +762,15 @@ async def main():
 
     log(f"\n✅ Relatório HTML gerado: {relatorio_path}")
     log(f"✅ Resultados únicos: {len(todos_resultados)} ({n_aberto} abertos, {n_provavel} prováveis, {n_encerrado} encerrados)")
+
+    # ── Alerta Telegram (opcional via variável de ambiente) ──
+    enviar_alerta_telegram(abertos)
+
     log("RADAR FINALIZADO")
 
-    # Abrir automaticamente no navegador
-    webbrowser.open(f"file:///{relatorio_path.replace(os.sep, '/')}")
+    # Abrir automaticamente no navegador local apenas se NÃO estiver em ambiente de CI/Actions
+    if not os.environ.get("CI"):
+        webbrowser.open(f"file:///{relatorio_path.replace(os.sep, '/')}")
 
 
 if __name__ == "__main__":

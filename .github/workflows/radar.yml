@@ -1,0 +1,64 @@
+name: Radar Diário de Cursos
+
+on:
+  schedule:
+    # Executa todos os dias às 09:00 UTC (06:00 horário de Brasília)
+    - cron: '0 9 * * *'
+  # Permite rodar manualmente pela aba "Actions" do GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar Dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright requests
+          playwright install --with-deps chromium
+
+      - name: Executar Radar
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CI: "true"
+        run: |
+          python radar.py
+
+      - name: Preparar site para o Pages
+        run: |
+          mkdir -p public
+          # Copia o relatório como index.html para abrir direto no domínio do Pages
+          cp relatorio.html public/index.html
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Fazer Upload do Artefato
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'public'
+
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

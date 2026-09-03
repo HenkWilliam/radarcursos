@@ -140,7 +140,26 @@ Contribuições são bem-vindas! Sugestões:
 
 ---
 
-## 📄 Licença
+## 🌐 Publicação Automática no GitHub Pages
+O projeto já conta com um workflow do **GitHub Actions** em [`.github/workflows/radar.yml`](.github/workflows/radar.yml) que roda todos os dias às 06:00 (Brasília) e publica o relatório na web gratuitamente.
+
+Para ativar no seu repositório:
+1. No seu repositório no GitHub, vá em **Settings** > **Pages**
+2. Em **Build and deployment** > **Source**, selecione: **GitHub Actions**
+3. Pronto! O site ficará acessível em:
+   `https://HenkWilliam.github.io/radarcursos/`
+
+---
+
+## 📢 Alertas no Telegram (Opcional)
+Se quiser receber no seu celular quando novas vagas 🟢 **Abertas** forem encontradas:
+1. Crie um bot no Telegram com o [@BotFather](https://t.me/BotFather) e guarde o **Token**.
+2. Pegue seu ID de usuário ou do seu grupo/canal (usando por exemplo o [@userinfobot](https://t.me/userinfobot)).
+3. No GitHub, vá em **Settings** > **Secrets and variables** > **Actions** e crie 2 secrets:
+   - `TELEGRAM_BOT_TOKEN`: Token do seu bot
+   - `TELEGRAM_CHAT_ID`: ID do seu chat/canal
+
+---
 
 MIT — veja [LICENSE](LICENSE) para detalhes.
 
