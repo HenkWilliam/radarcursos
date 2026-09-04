@@ -90,16 +90,24 @@
         "SISU"
     ],
     "instituicoes_conhecidas": [
-        "UFMG", "USP", "UNICAMP", "UFRJ", "UFSC", "UFPE", "UFC", "UFSM",
-        "CEFET", "IFSP", "IFG", "IFCE", "IFRS", "IFPR", "IFBA", "IFPB",
-        "UnB", "UFBA", "UFPR", "UFRGS", "UFAM", "UFPA", "UFMA", "UFPB",
-        "UFERSA", "UFPI", "UFAL", "UFSE", "UFOP", "UFJF", "UFU", "UFV",
-        "UFES", "UNIRIO", "UFRRJ", "UFABC", "UNIFESP", "UNIFEI",
-        "UEL", "UEM", "UEPG", "UNICENTRO", "UNIOESTE",
-        "UERJ", "UFF", "UENF", "UERGS", "UECE", "UPE",
-        "UTFPR", "UFTM", "UFVJM", "UFOB", "UFCSPA", "FURG",
-        "Senai", "SENAC", "SEBRAE", "Fundação Bradesco", "Instituto Metrópole Digital",
-        "UFCAT", "UFGD", "UFMS", "UFMT", "UFAC", "UFAP", "UFRO",
-        "UNILAB", "UNIRIO", "UNIVASF", "UFR"
+        "FATEC", "Fatec", "Centro Paula Souza", "UNIVESP", "Univesp", "CEDERJ", "Cederj", "UAB",
+        "CEFET-MG", "CEFET-RJ", "CEFET", "Colégio Pedro II", "UTFPR",
+        "IFSP", "IFMG", "IFNMG", "IF Sudeste MG", "IFSULDEMINAS", "IFRJ", "IFFluminense", "IFF",
+        "IFRS", "IFFarroupilha", "IFFar", "IFSul", "IFPR", "IFSC", "IFC",
+        "IFBA", "IFBaiano", "IFPE", "IFSertãoPE", "IFCE", "IFRN", "IFPB", "IFPI", "IFMA", "IFS",
+        "IFPA", "IFAM", "IFAP", "IFRO", "IFRR", "IFAC", "IFTO", "IFG", "IF Goiano", "IFMT", "IFMS", "IFES", "IFB",
+        "USP", "UNICAMP", "UNESP", "UFRJ", "UFF", "UERJ", "UNIRIO", "UFRRJ", "UENF",
+        "UFMG", "UFU", "UFLA", "UFV", "UFOP", "UFJF", "UNIFEI", "UFTM", "UFVJM", "UEMG", "UNIMONTES",
+        "UFES", "UFSC", "UDESC", "UFFS", "UFRGS", "UFCSPA", "UFSM", "FURG", "UNIPAMPA", "UERGS",
+        "UFPR", "UEL", "UEM", "UEPG", "UNICENTRO", "UNIOESTE", "UENP", "UNESPAR",
+        "UnB", "UFG", "UEG", "UFJ", "UFCAT", "UFMS", "UEMS", "UFGD", "UFMT", "UNEMAT", "UFR",
+        "UFBA", "UFRB", "UESB", "UESC", "UEFS", "UNEB", "UFOB", "UFSB",
+        "UFPE", "UPE", "UNIVASF", "UFC", "UECE", "URCA", "UVA", "UNILAB", "UFCA",
+        "UFRN", "UERN", "UFERSA", "UFPB", "UFCG", "UEPB", "UFAL", "UNCISAL", "UFS",
+        "UFMA", "UEMA", "UFPI", "UESPI", "UFPA", "UEPA", "UFRA", "UNIFESSPA", "UFOPA",
+        "UFAM", "UEA", "UNIFAP", "UEAP", "UFRR", "UERR", "UNIR", "UFAC", "UFT", "UNITINS",
+        "UFABC", "UNIFESP", "UFSCar",
+        "ENAP", "Enap", "FIOCRUZ", "Fiocruz", "EMBRAPII", "IMD", "Instituto Metrópole Digital",
+        "SENAI", "Senai", "SENAC", "Senac", "SEBRAE", "Sebrae", "Fundação Bradesco"
     ]
 }

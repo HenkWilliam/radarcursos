@@ -170,18 +170,24 @@ def extrair_dominio(url: str) -> str:
 
 def detectar_instituicao(titulo: str, descricao: str, url: str) -> str:
     """Tenta identificar a instituição de ensino no título, descrição ou URL."""
-    texto = f"{titulo} {descricao} {url}".upper()
+    texto_completo = f"{titulo} {descricao} {url}"
+
+    # 1. Verifica instituições conhecidas com fronteira de palavra para evitar falsos positivos
     for inst in INSTITUICOES_CONHECIDAS:
-        if inst.upper() in texto:
+        padrao = r'(?<![A-Za-z0-9À-ÿ])' + re.escape(inst) + r'(?![A-Za-z0-9À-ÿ])'
+        if re.search(padrao, texto_completo, re.IGNORECASE):
             return inst
+
     dominio = extrair_dominio(url)
     if dominio.endswith(".edu.br") or dominio.endswith(".gov.br"):
         partes = dominio.replace(".edu.br", "").replace(".gov.br", "").split(".")
-        if partes:
+        if partes and len(partes[-1]) >= 2:
             return partes[-1].upper()
+
     padroes = [
+        r"(Instituto\s+Federal\s+(?:de|do|da|dos|das)?\s*[\w\s]+?)[\s,\-\|]",
+        r"(Faculdade\s+de\s+Tecnologia(?:\s+[\w\s]+?)?)[\s,\-\|]",
         r"(Universidade\s+(?:Federal|Estadual|Municipal)?\s*(?:de|do|da|dos|das)?\s+[\w\s]+?)[\s,\-\|]",
-        r"(Instituto\s+Federal\s+(?:de|do|da)?\s*[\w\s]+?)[\s,\-\|]",
         r"(CEFET[\-\s]\w+)",
         r"(SENAC[\-\s]?\w*)",
         r"(SENAI[\-\s]?\w*)",
@@ -191,6 +197,7 @@ def detectar_instituicao(titulo: str, descricao: str, url: str) -> str:
         m = re.search(padrao, texto_orig, re.IGNORECASE)
         if m:
             return m.group(1).strip()[:80]
+
     return extrair_dominio(url) or "—"
 
 
@@ -284,7 +291,7 @@ def detectar_status_vaga(titulo: str, descricao: str) -> str:
 async def pesquisar(page, consulta: str) -> list[dict]:
     log(f"🔎 Pesquisando: {consulta}")
 
-    url = f"https://www.bing.com/search?q={urllib.parse.quote_plus(consulta)}"
+    url = f"https://www.bing.com/search?q={urllib.parse.quote_plus(consulta)}&setlang=pt-br&cc=BR&mkt=pt-BR"
 
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
@@ -491,12 +498,50 @@ def gerar_html(resultados: list[dict]) -> str:
         }}
         .btn-encerrado:hover {{ background: rgba(239,68,68,.18); }}
 
-        /* ── Counter ── */
-        .counter {{ max-width: 1300px; margin: .4rem auto; padding: 0 1.5rem; color: var(--muted); font-size: .85rem; }}
+        /* ── Toolbar & Counter ── */
+        .toolbar {{
+            max-width: 1300px; margin: 0 auto 1.2rem; padding: 0 1.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 1rem;
+        }}
+        .counter {{ color: var(--muted); font-size: .88rem; margin: 0; }}
         .counter strong {{ color: #a5b4fc; }}
+        .pagination-size {{ display: flex; align-items: center; gap: .55rem; font-size: .85rem; color: var(--muted); }}
+        .pagination-size select {{
+            background: #1e1e2a; border: 1px solid var(--border); color: var(--text);
+            padding: .35rem .7rem; border-radius: 8px; font-size: .85rem; cursor: pointer; outline: none;
+            font-family: inherit; transition: border-color .2s;
+        }}
+        .pagination-size select:focus {{ border-color: var(--accent); }}
+
+        /* ── Paginação ── */
+        .pagination-container {{
+            max-width: 1300px; margin: 2rem auto 3rem; padding: 0 1.5rem;
+            display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: .45rem;
+        }}
+        .page-btn {{
+            background: var(--surface); border: 1px solid var(--border); color: var(--text);
+            padding: .5rem .85rem; border-radius: 8px; font-size: .85rem; font-weight: 600;
+            cursor: pointer; transition: all .2s; min-width: 38px; display: inline-flex;
+            align-items: center; justify-content: center; font-family: inherit; user-select: none;
+        }}
+        .page-btn:hover:not(.disabled):not(.active) {{
+            background: rgba(99,102,241,.15); border-color: var(--accent); color: #fff;
+            transform: translateY(-1px);
+        }}
+        .page-btn.active {{
+            background: var(--accent); color: #fff; border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(99,102,241,.4);
+        }}
+        .page-btn.disabled {{
+            opacity: .35; cursor: not-allowed;
+        }}
+        .page-dots {{
+            color: var(--muted); padding: 0 .4rem; font-size: 1rem;
+        }}
 
         /* ── Grid ── */
-        .grid {{ max-width: 1300px; margin: 1rem auto 3rem; padding: 0 1.5rem;
+        .grid {{ max-width: 1300px; margin: 1rem auto 2rem; padding: 0 1.5rem;
             display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.2rem; }}
 
         /* ── Card ── */
@@ -573,16 +618,16 @@ def gerar_html(resultados: list[dict]) -> str:
 </div>
 
 <div class="controls">
-    <input type="search" id="busca" placeholder="🔍 Filtrar por título, instituição ou descrição…" oninput="filtrar()">
-    <select id="filtroArea" onchange="filtrar()">
+    <input type="search" id="busca" placeholder="🔍 Filtrar por título, instituição ou descrição…" oninput="filtrar(true)">
+    <select id="filtroArea" onchange="filtrar(true)">
         <option value="">Todas as áreas</option>
         {area_opts}
     </select>
-    <select id="filtroNivel" onchange="filtrar()">
+    <select id="filtroNivel" onchange="filtrar(true)">
         <option value="">Todos os níveis</option>
         {nivel_opts}
     </select>
-    <select id="filtroStatus" onchange="filtrar()">
+    <select id="filtroStatus" onchange="filtrar(true)">
         <option value="ativos">🟢🟡 Apenas abertos/prováveis</option>
         <option value="Aberto">🟢 Só abertos</option>
         <option value="Provável">🟡 Só prováveis</option>
@@ -591,11 +636,25 @@ def gerar_html(resultados: list[dict]) -> str:
     <button class="btn btn-reset" onclick="resetar()">✕ Limpar</button>
 </div>
 
-<p class="counter" id="counter">Exibindo <strong id="visivel">{visiveis_default}</strong> de <strong>{total}</strong> resultado(s)</p>
+<div class="toolbar">
+    <p class="counter" id="counter">Exibindo <strong id="visivel">{visiveis_default}</strong> de <strong>{total}</strong> oportunidade(s)</p>
+    <div class="pagination-size">
+        <label for="porPagina">Itens por página:</label>
+        <select id="porPagina" onchange="mudarPorPagina()">
+            <option value="12">12</option>
+            <option value="24" selected>24</option>
+            <option value="48">48</option>
+            <option value="96">96</option>
+            <option value="999999">Todos</option>
+        </select>
+    </div>
+</div>
 
 <main class="grid" id="grid">
     {cards_html}
 </main>
+
+<div class="pagination-container" id="paginacao"></div>
 
 <div class="empty" id="empty">
     <p style="font-size:2rem">🔍</p>
@@ -605,16 +664,19 @@ def gerar_html(resultados: list[dict]) -> str:
 <footer>RadarCursos &mdash; Gerado em {data_str} · Ano de referência: {ano_atual} · Dados via Bing</footer>
 
 <script>
-    // Ocultar encerrados por padrão
-    document.querySelectorAll('.card[data-status="Encerrado"]').forEach(c => c.classList.add('hidden'));
+    let paginaAtual = 1;
+    let itensPorPagina = 24;
+    let cardsFiltrados = [];
 
-    function filtrar() {{
+    function filtrar(resetPagina = true) {{
+        if (resetPagina) paginaAtual = 1;
         const busca      = document.getElementById('busca').value.toLowerCase();
         const area       = document.getElementById('filtroArea').value;
         const nivel      = document.getElementById('filtroNivel').value;
         const statusSel  = document.getElementById('filtroStatus').value;
-        const cards      = document.querySelectorAll('.card');
-        let visivel = 0;
+        const cards      = Array.from(document.querySelectorAll('.card'));
+        
+        cardsFiltrados = [];
 
         cards.forEach(card => {{
             const texto  = card.innerText.toLowerCase();
@@ -625,20 +687,94 @@ def gerar_html(resultados: list[dict]) -> str:
             const okNivel  = !nivel || card.dataset.nivel === nivel;
             let   okStatus = true;
 
-            if (statusSel === 'ativos')   okStatus = st === 'Aberto' || st === 'Provável';
-            else if (statusSel === '')     okStatus = true;
-            else                           okStatus = st === statusSel;
+            if (statusSel === 'ativos')    okStatus = st === 'Aberto' || st === 'Provável';
+            else if (statusSel === '')      okStatus = true;
+            else                            okStatus = st === statusSel;
 
             if (okBusca && okArea && okNivel && okStatus) {{
-                card.classList.remove('hidden');
-                visivel++;
+                cardsFiltrados.push(card);
             }} else {{
                 card.classList.add('hidden');
             }}
         }});
 
-        document.getElementById('visivel').textContent = visivel;
-        document.getElementById('empty').classList.toggle('visible', visivel === 0);
+        document.getElementById('visivel').textContent = cardsFiltrados.length;
+        document.getElementById('empty').classList.toggle('visible', cardsFiltrados.length === 0);
+
+        renderizarPaginacao();
+    }}
+
+    function renderizarPaginacao() {{
+        const total = cardsFiltrados.length;
+        const totalPaginas = Math.ceil(total / itensPorPagina) || 1;
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+        if (paginaAtual < 1) paginaAtual = 1;
+
+        // Ocultar todos os cards
+        document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+
+        // Exibir apenas os da página atual
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const fim = inicio + itensPorPagina;
+        const cardsPagina = cardsFiltrados.slice(inicio, fim);
+        cardsPagina.forEach(c => c.classList.remove('hidden'));
+
+        // Renderizar barra de navegação
+        const nav = document.getElementById('paginacao');
+        if (totalPaginas <= 1) {{
+            nav.innerHTML = '';
+            nav.style.display = 'none';
+            return;
+        }}
+        nav.style.display = 'flex';
+
+        let html = '';
+        
+        // Botão Anterior
+        html += `<button class="page-btn ${{paginaAtual === 1 ? 'disabled' : ''}}" onclick="irParaPagina(${{paginaAtual - 1}})" ${{paginaAtual === 1 ? 'disabled' : ''}}>‹ Anterior</button>`;
+
+        // Lista de páginas com reticências
+        const paginas = [];
+        if (totalPaginas <= 7) {{
+            for (let i = 1; i <= totalPaginas; i++) paginas.push(i);
+        }} else {{
+            paginas.push(1);
+            if (paginaAtual > 3) paginas.push('...');
+            
+            let start = Math.max(2, paginaAtual - 1);
+            let end = Math.min(totalPaginas - 1, paginaAtual + 1);
+            for (let i = start; i <= end; i++) paginas.push(i);
+            
+            if (paginaAtual < totalPaginas - 2) paginas.push('...');
+            paginas.push(totalPaginas);
+        }}
+
+        paginas.forEach(p => {{
+            if (p === '...') {{
+                html += `<span class="page-dots">…</span>`;
+            }} else {{
+                html += `<button class="page-btn ${{p === paginaAtual ? 'active' : ''}}" onclick="irParaPagina(${{p}})">${{p}}</button>`;
+            }}
+        }});
+
+        // Botão Próximo
+        html += `<button class="page-btn ${{paginaAtual === totalPaginas ? 'disabled' : ''}}" onclick="irParaPagina(${{paginaAtual + 1}})" ${{paginaAtual === totalPaginas ? 'disabled' : ''}}>Próxima ›</button>`;
+
+        nav.innerHTML = html;
+    }}
+
+    function irParaPagina(p) {{
+        const totalPaginas = Math.ceil(cardsFiltrados.length / itensPorPagina) || 1;
+        if (p < 1 || p > totalPaginas || p === paginaAtual) return;
+        paginaAtual = p;
+        renderizarPaginacao();
+        document.getElementById('grid').scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+    }}
+
+    function mudarPorPagina() {{
+        itensPorPagina = parseInt(document.getElementById('porPagina').value, 10);
+        paginaAtual = 1;
+        renderizarPaginacao();
     }}
 
     function resetar() {{
@@ -646,8 +782,13 @@ def gerar_html(resultados: list[dict]) -> str:
         document.getElementById('filtroArea').value   = '';
         document.getElementById('filtroNivel').value  = '';
         document.getElementById('filtroStatus').value = 'ativos';
-        filtrar();
+        document.getElementById('porPagina').value    = '24';
+        itensPorPagina = 24;
+        filtrar(true);
     }}
+
+    // Inicialização
+    filtrar(true);
 </script>
 </body>
 </html>"""
