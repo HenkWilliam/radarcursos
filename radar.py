@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import os
 import re
@@ -78,7 +79,10 @@ def limpar_log():
 def log(mensagem: str):
     data = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     texto = f"[{data}] {mensagem}"
-    print(texto)
+    try:
+        print(texto)
+    except UnicodeEncodeError:
+        print(texto.encode("utf-8", errors="replace").decode("utf-8", errors="replace"))
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(texto + "\n")
 
@@ -133,15 +137,21 @@ def salvar_resultado(con, consulta: str, resultado: dict):
 
 # ─── Utilitários ─────────────────────────────────────────────────────────────
 def extrair_url_real(href: str) -> str:
-    """Remove o redirect do DuckDuckGo e retorna a URL real."""
+    """Remove o redirect do Bing e retorna a URL real."""
     if not href:
         return ""
-    if "duckduckgo.com/l/" in href or href.startswith("//duckduckgo.com"):
-        match = re.search(r"uddg=([^&]+)", href)
+    # Bing redirect: /ck/a?...&u=a1<base64>...
+    if "bing.com/ck/a" in href and "u=a1" in href:
+        match = re.search(r"[?&]u=a1([A-Za-z0-9+/=_-]+)", href)
         if match:
-            return unquote(match.group(1))
+            b64 = match.group(1).replace('-', '+').replace('_', '/')
+            b64 += "=" * ((4 - len(b64) % 4) % 4)
+            try:
+                return base64.b64decode(b64).decode('utf-8')
+            except Exception:
+                pass
     if href.startswith("/"):
-        return "https://duckduckgo.com" + href
+        return "https://www.bing.com" + href
     return href
 
 
@@ -272,23 +282,23 @@ def detectar_status_vaga(titulo: str, descricao: str) -> str:
 async def pesquisar(page, consulta: str) -> list[dict]:
     log(f"🔎 Pesquisando: {consulta}")
 
-    url = "https://html.duckduckgo.com/html/?q=" + consulta.replace(" ", "+")
+    url = f"https://www.bing.com/search?q={urllib.parse.quote_plus(consulta)}"
 
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_timeout(2000)
 
-        resultados = await page.locator(".result").all()
+        resultados = await page.locator("li.b_algo").all()
         log(f"   ↳ {len(resultados)} resultado(s) encontrado(s)")
 
         dados = []
         for resultado in resultados[:10]:
             try:
-                titulo = await resultado.locator(".result__a").inner_text()
-                href   = await resultado.locator(".result__a").get_attribute("href")
+                titulo = await resultado.locator("h2").inner_text()
+                href   = await resultado.locator("h2 a").get_attribute("href")
 
                 try:
-                    descricao = await resultado.locator(".result__snippet").inner_text()
+                    descricao = await resultado.locator(".b_caption p, .b_lineclamp2, .b_lineclamp3, .b_lineclamp4").first.inner_text()
                 except Exception:
                     descricao = ""
 
@@ -590,7 +600,7 @@ def gerar_html(resultados: list[dict]) -> str:
     <p style="margin-top:.5rem">Nenhum resultado encontrado para os filtros selecionados.</p>
 </div>
 
-<footer>RadarCursos &mdash; Gerado em {data_str} · Ano de referência: {ano_atual} · Dados via DuckDuckGo</footer>
+<footer>RadarCursos &mdash; Gerado em {data_str} · Ano de referência: {ano_atual} · Dados via Bing</footer>
 
 <script>
     // Ocultar encerrados por padrão
@@ -706,7 +716,12 @@ async def main():
 
     async with async_playwright() as playwright:
         navegador = await playwright.chromium.launch(headless=True)
-        pagina    = await navegador.new_page(viewport={"width": 1366, "height": 768})
+        contexto  = await navegador.new_context(
+            viewport={"width": 1366, "height": 768},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            locale="pt-BR"
+        )
+        pagina    = await contexto.new_page()
 
         for i, consulta in enumerate(CONSULTAS, start=1):
             log(f"\n[{i}/{len(CONSULTAS)}] {consulta}")
