@@ -4,8 +4,11 @@ on:
   schedule:
     # Executa todos os dias às 09:00 UTC (06:00 horário de Brasília)
     - cron: '0 9 * * *'
-  # Permite rodar manualmente pela aba "Actions" do GitHub
   workflow_dispatch:
+  # Executa automaticamente sempre que fizer um push na branch main
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
