@@ -41,6 +41,8 @@ CONSULTAS = [
     '\"Inteligência Artificial\" graduação EAD gratuito edital',
     '\"Segurança da Informação\" EAD gratuito edital',
     '\"Tecnologia da Informação\" EAD gratuito edital',
+    '\"Bacharelado em Tecnologia da Informação\" EAD gratuito edital',
+    '\"Bacharelado em Tecnologia da Informação\" edital',
     '\"Redes de Computadores\" EAD gratuito edital',
     '\"Desenvolvimento Web\" graduação EAD gratuito edital',
     '\"Desenvolvimento Mobile\" graduação EAD gratuito edital',
