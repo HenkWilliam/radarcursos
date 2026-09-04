@@ -287,6 +287,66 @@ def detectar_status_vaga(titulo: str, descricao: str) -> str:
     return "Encerrado"
 
 
+# ─── Filtro de Relevância / Anti-Lixo ───────────────────────────────────────
+DOMINIOS_BLOQUEADOS = [
+    "dicio.com.br", "infopedia.pt", "significados.com.br", "dicionarioinformal.com.br",
+    "priberam.org", "wiktionary.org", "wikipedia.org",
+    "slidesgo.com", "slidescarnival.com", "makerppt.com", "canva.com", "presentationgo.com",
+    "facebook.com", "instagram.com", "tiktok.com", "twitter.com", "x.com",
+    "youtube.com", "pinterest.com",
+    "mercadolivre.com.br", "amazon.com.br", "shopee.com.br", "magazineluiza.com.br",
+    "bb.com.br", "bradesco.com", "itau.com.br", "santander.com.br",
+    "sicoob.com.br", "sicredi.com.br", "bnb.gov.br", "badespi.com.br", "mibanco.com",
+    "baccredomatic.com", "guiatelefone.com", "guiadeagenciasbancarias.com", "agenciasbancarias.net",
+    "qualobanco.com.br"
+]
+
+TERMOS_LIXO_TITULO = [
+    "significado de", "o que significa", "o que é ", "sinônimo", "sinonimo",
+    "conjugação", "como se escreve", "dicionário", "dicionario",
+    "banca en línea", "mi banco", "banca personas", "banca virtual", "agência bancária", "agências bancárias",
+    "presentation maker", "powerpoint template", "google slides",
+    "comprar online", "frete grátis", "preço de", "melhores bancos"
+]
+
+TERMOS_EDUCACIONAIS_OBRIGATORIOS = [
+    "curso", "cursos", "graduação", "graduacao", "tecnólogo", "tecnologo",
+    "bacharelado", "licenciatura", "pós-graduação", "pos-graduacao",
+    "especialização", "especializacao", "mestrado", "doutorado", "mba",
+    "vestibular", "processo seletivo", "seletivo", "edital",
+    "inscrição", "inscricao", "inscrições", "inscricoes", "vagas",
+    "ead", "a distância", "semipresencial", "sisu", "enem", "prouni",
+    "faculdade", "universidade", "instituto federal", "fatec", "senac", "senai",
+    "matrícula", "matricula", "estude", "gratuito", "gratuita"
+]
+
+
+def validar_resultado(titulo: str, descricao: str, url: str) -> bool:
+    """Verifica se o resultado é realmente um curso/edital educacional válido."""
+    if not titulo or not url or url.startswith("#"):
+        return False
+
+    url_lower = url.lower()
+    titulo_lower = titulo.lower()
+    texto_completo = f"{titulo} {descricao}".lower()
+
+    # 1. Bloqueio de domínios que não ofertam cursos
+    for dom in DOMINIOS_BLOQUEADOS:
+        if dom in url_lower:
+            return False
+
+    # 2. Bloqueio de termos de dicionário, modelos PPT ou agências de banco no título
+    for termo in TERMOS_LIXO_TITULO:
+        if termo in titulo_lower:
+            return False
+
+    # 3. Exige pelo menos um termo educacional no título ou descrição
+    if not any(termo in texto_completo for termo in TERMOS_EDUCACIONAIS_OBRIGATORIOS):
+        return False
+
+    return True
+
+
 # ─── Scraping ────────────────────────────────────────────────────────────────
 async def pesquisar(page, consulta: str) -> list[dict]:
     log(f"🔎 Pesquisando: {consulta}")
@@ -311,7 +371,11 @@ async def pesquisar(page, consulta: str) -> list[dict]:
                 except Exception:
                     descricao = ""
 
-                url_real    = extrair_url_real(href or "")
+                url_real = extrair_url_real(href or "")
+
+                if not validar_resultado(titulo, descricao, url_real):
+                    continue
+
                 instituicao = detectar_instituicao(titulo, descricao, url_real)
                 nivel       = detectar_nivel(titulo, descricao, consulta)
                 area        = detectar_area(titulo, descricao)
